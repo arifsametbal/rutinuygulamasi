@@ -25,15 +25,17 @@
         .icon-select { 
             -webkit-appearance: none; appearance: none; text-align: center; text-align-last: center;
         }
+        /* Gizli dosya inputu için */
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
 <div id="app" class="flex flex-col min-h-screen max-w-md mx-auto bg-white shadow-2xl relative overflow-hidden">
 
-    <!-- YÜKLENİYOR UYARISI (JS Çalışmazsa görünür) -->
-    <div v-if="false" class="flex items-center justify-center h-screen text-gray-500">
-        Uygulama Yükleniyor...
+    <!-- YÜKLENİYOR UYARISI -->
+    <div v-if="loading" class="absolute inset-0 z-[60] flex items-center justify-center bg-white/90">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
     </div>
 
     <!-- KARŞILAMA EKRANI -->
@@ -225,10 +227,12 @@
     </div>
     <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="onFileSelected">
 </div>
+
 <script>
     const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
     createApp({
         setup() {
+            const loading = ref(false);
             const appTitle = ref(localStorage.getItem('ikra_app_title') || "İkra'nın Rutini");
             const showWelcome = ref(true);
             const activeTab = ref('rutin');
@@ -368,7 +372,7 @@
             onMounted(() => { setTimeout(() => { if(activeTab.value==='rutin') renderPieChart(); }, 100); });
 
             return {
-                appTitle, showWelcome, activeTab, selectedDate, profileImage, defaultAvatar, editMode,
+                loading, appTitle, showWelcome, activeTab, selectedDate, profileImage, defaultAvatar, editMode,
                 weekDays, changeWeek, selectDate, isSelected, formatDateDisplay,
                 activities, subjects, iconOptions,
                 activityLog, testRecords, dailyActivities, dailyTests,
