@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>İkra'nın Rutini</title>
+    <title>Rutin Takip</title>
     
-    <!-- Gerekli Kütüphaneler -->
+    <!-- Kütüphaneler -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -25,19 +25,25 @@
         .icon-select { 
             -webkit-appearance: none; appearance: none; text-align: center; text-align-last: center;
         }
-        [v-cloak] { display: none; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div id="app" v-cloak class="flex flex-col min-h-screen max-w-md mx-auto bg-white shadow-2xl relative overflow-hidden">
+<div id="app" class="flex flex-col min-h-screen max-w-md mx-auto bg-white shadow-2xl relative overflow-hidden">
+
+    <!-- YÜKLENİYOR UYARISI -->
+    <div v-if="loading" class="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-pink-500 mb-3"></div>
+        <p class="text-pink-600 font-bold animate-pulse">Veriler Temizleniyor...</p>
+    </div>
 
     <!-- KARŞILAMA EKRANI -->
     <transition name="fade">
         <div v-if="showWelcome" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-pink-100 to-green-100 text-center p-6">
             <div class="bg-white/80 backdrop-blur-sm p-8 rounded-3xl shadow-xl border-4 border-white animate-bounce-slow">
                 <div class="text-6xl mb-6">👑</div>
-                <h1 class="text-3xl font-extrabold text-pink-500 mb-8 tracking-tight">Rutinine Hoş Geldin</h1>
+                <h1 class="text-3xl font-extrabold text-pink-500 mb-8 tracking-tight">Hoş Geldin!</h1>
                 <button @click="showWelcome = false" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold text-xl py-4 rounded-2xl shadow-lg transition transform hover:scale-105 btn-press">
                     <i class="fas fa-star text-yellow-300 mr-2"></i> Başlayalım!
                 </button>
@@ -46,10 +52,16 @@
     </transition>
 
     <!-- ÜST BAR -->
-    <header class="bg-pink-400 p-4 pb-2 text-white shadow-md z-10 transition-all duration-300" :class="{'bg-purple-600': editMode}">
+    <header class="bg-pink-400 p-4 pb-2 text-white shadow-md z-10 transition-all duration-300" :class="{'bg-purple-600': editMode, 'bg-gray-800': isAdmin}">
+        
+        <!-- MOD BİLGİLENDİRME -->
         <div v-if="editMode" class="bg-yellow-300 text-yellow-900 text-xs font-bold text-center py-1 rounded mb-2 animate-pulse">
             DÜZENLEME MODU AÇIK
         </div>
+        <div v-if="isAdmin" class="bg-red-500 text-white text-xs font-bold text-center py-1 rounded mb-2">
+            YÖNETİCİ GİRİŞİ YAPILDI 🔓
+        </div>
+
         <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-3">
                 <div class="w-16 h-16 rounded-full border-4 border-white bg-white/20 overflow-hidden shadow-sm relative group cursor-pointer flex items-center justify-center" @click="triggerFileUpload">
@@ -57,17 +69,25 @@
                     <i v-else class="fas fa-camera text-2xl text-white/80"></i>
                 </div>
                 <div class="flex-1">
-                    <input v-if="editMode" v-model="appTitle" class="bg-white/20 border border-white/50 rounded p-1 text-white font-bold w-full" placeholder="Başlık Yazın...">
+                    <input v-if="editMode" v-model="appTitle" class="bg-white/20 border border-white/50 rounded p-1 text-white font-bold w-full" placeholder="İsim Giriniz...">
                     <h1 v-else class="text-xl font-bold leading-tight">{{ appTitle }}</h1>
-                    <p class="text-xs opacity-90 font-medium">💾 Cihaz Hafızası</p>
+                    <p class="text-xs opacity-90 font-medium">✨ Hedeflerine ulaş!</p>
                 </div>
             </div>
-            <button @click="toggleEditMode" :class="editMode ? 'bg-green-400 text-white shadow-lg scale-110' : 'bg-white/20 text-white'" class="p-3 rounded-full w-12 h-12 flex items-center justify-center transition ml-2">
-                <i class="fas" :class="editMode ? 'fa-save' : 'fa-pen'"></i>
-            </button>
+            
+            <div class="flex gap-2">
+                <!-- Yönetici Butonu -->
+                <button @click="toggleAdminLogin" :class="isAdmin ? 'bg-red-500' : 'bg-white/20'" class="p-3 rounded-full w-10 h-10 flex items-center justify-center transition text-white">
+                    <i class="fas" :class="isAdmin ? 'fa-unlock' : 'fa-lock'"></i>
+                </button>
+                <!-- Arayüz Düzenle Butonu -->
+                <button @click="toggleEditMode" :class="editMode ? 'bg-green-400 text-white shadow-lg scale-110' : 'bg-white/20 text-white'" class="p-3 rounded-full w-10 h-10 flex items-center justify-center transition">
+                    <i class="fas" :class="editMode ? 'fa-save' : 'fa-pen'"></i>
+                </button>
+            </div>
         </div>
         
-        <!-- TAKVİM -->
+        <!-- HAFTALIK TAKVİM -->
         <div class="flex justify-between items-center bg-white/10 p-2 rounded-xl backdrop-blur-sm mb-2">
             <button @click="changeWeek(-1)" class="p-2 hover:bg-white/20 rounded-full"><i class="fas fa-chevron-left"></i></button>
             <div class="flex gap-1 overflow-x-auto no-scrollbar">
@@ -82,7 +102,7 @@
             <button @click="changeWeek(1)" class="p-2 hover:bg-white/20 rounded-full"><i class="fas fa-chevron-right"></i></button>
         </div>
 
-        <!-- SEÇİLİ TARİH VE TAKVİM İKONU -->
+        <!-- SEÇİLİ TARİH -->
         <div class="flex items-center justify-center gap-3 bg-black/10 py-1 rounded mt-1 relative">
             <span class="text-xs font-bold">Seçili: {{ formatDateDisplay(selectedDate) }}</span>
             <div class="relative w-6 h-6 cursor-pointer">
@@ -108,8 +128,6 @@
 
     <!-- İÇERİK -->
     <main class="flex-1 overflow-y-auto p-4 bg-gray-50 pb-20">
-        
-        <!-- RUTİN SAYFASI -->
         <div v-if="activeTab === 'rutin'" class="space-y-6">
             <div class="grid grid-cols-2 gap-3">
                 <div v-for="(act, index) in activities" :key="act.id" class="relative group animate-slide-up" :style="{ animationDelay: index * 50 + 'ms' }">
@@ -147,7 +165,6 @@
                     <span class="font-bold text-sm">Yeni Ekle</span>
                 </button>
             </div>
-
             <div class="bg-white p-5 rounded-3xl shadow-md border border-pink-100">
                 <h3 class="font-bold text-pink-500 mb-4 flex items-center gap-2"><i class="fas fa-chart-pie"></i> Günlük Dağılım</h3>
                 <div class="h-48 relative">
@@ -155,7 +172,6 @@
                     <div v-if="dailyActivities.length === 0" class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm italic">Veri yok</div>
                 </div>
             </div>
-
             <div class="space-y-2">
                 <div v-for="log in dailyActivities" :key="log.id" class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm">
                     <div class="flex items-center gap-3">
@@ -167,15 +183,25 @@
                             <div class="text-xs text-gray-400">{{ log.minutes }} dk <span v-if="log.pages">• {{ log.pages }} Syf</span></div>
                         </div>
                     </div>
-                    <button @click="deleteLog(log.id, 'activities')" class="text-red-300 hover:text-red-500 p-2"><i class="fas fa-trash"></i></button>
+                    <!-- YÖNETİCİ BUTONLARI -->
+                    <div v-if="isAdmin" class="flex gap-2">
+                        <button @click="editLog(log, 'activity')" class="text-blue-400 hover:text-blue-600 p-2 bg-blue-50 rounded-lg">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <!-- Sıfırlama (Silme) Butonu -->
+                        <button @click="editLog(log, 'activity_delete')" class="text-red-400 hover:text-red-600 p-2 bg-red-50 rounded-lg" title="Silmek için düzenleyip 0 yapın">
+                             <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- DERS SAYFASI -->
         <div v-if="activeTab === 'ders'" class="space-y-6">
             <div class="bg-white p-5 rounded-3xl shadow-md border-t-4 border-green-500 relative">
-                <h3 class="font-bold text-green-700 mb-4 flex items-center gap-2"><i class="fas fa-clipboard-check"></i> Test Sonucu Gir</h3>
+                <h3 class="font-bold text-green-700 mb-4 flex items-center gap-2">
+                    <i class="fas fa-clipboard-check"></i> 
+                    {{ editingId ? 'Kaydı Düzenle' : 'Test Sonucu Gir' }}
+                </h3>
                 <div class="space-y-3">
                     <div>
                         <label class="text-xs font-bold text-gray-400 block mb-1">Ders Seç</label>
@@ -193,135 +219,70 @@
                             </div>
                         </div>
                     </div>
-
                     <div><label class="text-xs font-bold text-gray-400 block mb-1">Toplam Soru</label><input type="number" v-model="newTest.total" class="w-full p-3 rounded-xl border-2 border-gray-200 text-center font-bold text-lg focus:border-green-500 outline-none" placeholder="20"></div>
                     <div class="grid grid-cols-3 gap-2">
                         <div><label class="text-xs font-bold text-green-500 block mb-1 text-center">Doğru</label><input type="number" v-model="newTest.correct" class="w-full p-3 rounded-xl border-2 border-green-100 text-green-600 text-center font-bold outline-none" placeholder="0"></div>
                         <div><label class="text-xs font-bold text-yellow-500 block mb-1 text-center">Boş</label><input type="number" v-model="newTest.empty" class="w-full p-3 rounded-xl border-2 border-yellow-100 text-yellow-600 text-center font-bold outline-none" placeholder="0"></div>
                         <div><label class="text-xs font-bold text-red-500 block mb-1 text-center">Yanlış</label><div class="w-full p-3 rounded-xl bg-red-50 border-2 border-red-100 text-red-500 text-center font-bold">{{ calculateWrong }}</div></div>
                     </div>
-                    <button @click="saveTest" :disabled="!isValidTest" class="w-full bg-green-500 disabled:bg-gray-300 text-white font-bold py-3 rounded-xl shadow-lg btn-press mt-2">KAYDET</button>
+                    <div class="flex gap-2">
+                        <button v-if="editingId" @click="cancelEdit" class="w-1/3 bg-gray-300 text-gray-700 font-bold py-3 rounded-xl shadow-lg btn-press mt-2">İPTAL</button>
+                        <button @click="saveTest" :disabled="!isValidTest" class="flex-1 bg-green-500 disabled:bg-gray-300 text-white font-bold py-3 rounded-xl shadow-lg btn-press mt-2">
+                            {{ editingId ? 'GÜNCELLE' : 'KAYDET' }}
+                        </button>
+                    </div>
+                    <p v-if="editingId" class="text-xs text-center text-red-500 font-bold">⚠️ Silmek için Toplam Soru'yu 0 yapıp güncelleyin.</p>
                 </div>
             </div>
-            
             <div class="bg-white p-5 rounded-3xl shadow-md border border-green-100">
                 <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-green-600 flex items-center gap-2"><i class="fas fa-chart-line"></i> Başarı Grafiği</h3><select v-model="chartSubject" class="text-xs border rounded p-1"><option value="all">Genel</option><option v-for="s in subjects" :value="s">{{s}}</option></select></div>
                 <div class="h-48 relative"><canvas id="dersChart"></canvas><div v-if="filteredRecords.length === 0" class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm italic">Kayıt yok</div></div>
             </div>
-
             <div class="space-y-2">
                 <div v-for="record in dailyTests" :key="record.id" class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm">
                     <div><div class="font-bold text-gray-700 text-sm">{{ record.subject }}</div><div class="text-xs text-gray-400">{{ record.total }} Soru</div></div>
-                    <div class="flex gap-2"><span class="px-2 py-1 bg-green-100 text-green-600 rounded text-xs font-bold">D:{{record.correct}}</span><span class="px-2 py-1 bg-yellow-100 text-yellow-600 rounded text-xs font-bold">B:{{record.empty}}</span><span class="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">Y:{{record.wrong}}</span><button @click="deleteLog(record.id, 'tests')" class="text-red-300 hover:text-red-500 ml-1"><i class="fas fa-trash"></i></button></div>
+                    <div class="flex gap-2"><span class="px-2 py-1 bg-green-100 text-green-600 rounded text-xs font-bold">D:{{record.correct}}</span><span class="px-2 py-1 bg-yellow-100 text-yellow-600 rounded text-xs font-bold">B:{{record.empty}}</span><span class="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">Y:{{record.wrong}}</span></div>
+                    
+                    <!-- YÖNETİCİ BUTONLARI -->
+                    <div v-if="isAdmin" class="flex gap-2 ml-2">
+                        <button @click="editLog(record, 'test')" class="text-blue-400 hover:text-blue-600 p-2 bg-blue-50 rounded-lg">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <!-- Sıfırlama (Silme) Butonu -->
+                        <button @click="editLog(record, 'test_delete')" class="text-red-400 hover:text-red-600 p-2 bg-red-50 rounded-lg" title="Silmek için düzenleyip 0 yapın">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- FOOTER / YÖNETİCİ GİRİŞİ -->
-    <footer class="mt-auto bg-gray-100 p-4 text-center border-t border-gray-200">
-        <div class="flex justify-center items-center gap-2 text-xs text-gray-400 font-bold">
-            <span>Arif Samet BAL</span>
-            <span class="text-gray-300">|</span>
-            <button @click="showAdminLogin = true" class="flex items-center gap-1 hover:text-pink-400 transition">
-                <i class="fas fa-lock"></i> Yönetici
-            </button>
-        </div>
-    </footer>
-
-    <!-- AKTİVİTE EKLEME MODALI -->
+    <!-- Aktivite Modalı -->
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
         <div class="bg-white p-6 rounded-3xl w-full max-w-sm relative animate-slide-up shadow-2xl border-4 border-pink-200">
-            <button @click="showModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+            <button @click="showModal = false; editingId = null;" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
             <h3 class="text-xl font-bold text-gray-700 mb-6 flex items-center gap-2"><i :class="['fas', currentActivity?.icon, 'text-pink-400']"></i> {{ currentActivity?.label }}</h3>
             <div class="space-y-4">
                 <div><label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Süre (Dakika)</label><input type="number" v-model="modalMinutes" autofocus class="w-full text-center text-4xl font-bold p-3 border-2 border-pink-200 rounded-2xl outline-none focus:border-pink-500 text-gray-700" placeholder="0"></div>
                 <div v-if="currentActivity?.id === 'reading'"><label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Okunan Sayfa</label><input type="number" v-model="modalPages" class="w-full text-center text-xl font-bold p-3 border-2 border-orange-200 rounded-xl outline-none focus:border-orange-500 text-orange-600" placeholder="0"></div>
-                <button @click="confirmActivity" class="w-full bg-pink-500 text-white font-bold py-4 rounded-xl shadow-lg btn-press text-lg mt-4">KAYDET</button>
+                <p v-if="editingId" class="text-xs text-center text-red-400">Silmek için süreyi 0 yapıp güncelleyin.</p>
+                <button @click="confirmActivity" class="w-full bg-pink-500 text-white font-bold py-4 rounded-xl shadow-lg btn-press text-lg mt-4">
+                    {{ editingId ? 'GÜNCELLE' : 'KAYDET' }}
+                </button>
             </div>
         </div>
     </div>
-
-    <!-- YÖNETİCİ GİRİŞ & PANELİ MODALI -->
-    <div v-if="showAdminLogin" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-        <div class="bg-white p-6 rounded-2xl w-full max-w-md relative animate-slide-up shadow-2xl flex flex-col max-h-[80vh]">
-            <button @click="closeAdmin" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
-            
-            <!-- Giriş Formu -->
-            <div v-if="!isAdmin" class="py-6">
-                <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Yönetici Girişi</h3>
-                <div class="space-y-3">
-                    <input v-model="adminUser" type="text" placeholder="Kullanıcı Adı" class="w-full p-3 border rounded-lg outline-none focus:border-pink-500">
-                    <input v-model="adminPass" type="password" placeholder="Şifre" class="w-full p-3 border rounded-lg outline-none focus:border-pink-500">
-                    <button @click="checkLogin" class="w-full bg-pink-500 text-white font-bold py-3 rounded-lg hover:bg-pink-600">Giriş Yap</button>
-                    <p v-if="loginError" class="text-red-500 text-xs text-center font-bold">{{ loginError }}</p>
-                </div>
-            </div>
-
-            <!-- Yönetim Paneli -->
-            <div v-else class="flex flex-col h-full">
-                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 class="text-lg font-bold text-gray-800">Veri Yönetimi</h3>
-                    <button @click="isAdmin = false" class="text-xs text-red-500 font-bold border border-red-200 px-2 py-1 rounded hover:bg-red-50">Çıkış</button>
-                </div>
-                
-                <!-- Sekmeler -->
-                <div class="flex gap-2 mb-4">
-                    <button @click="adminTab = 'activities'" :class="adminTab === 'activities' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-2 rounded text-sm font-bold">Rutinler</button>
-                    <button @click="adminTab = 'tests'" :class="adminTab === 'tests' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'" class="flex-1 py-2 rounded text-sm font-bold">Testler</button>
-                </div>
-
-                <!-- Liste -->
-                <div class="flex-1 overflow-y-auto space-y-2 border rounded p-2 bg-gray-50">
-                    
-                    <!-- Aktiviteler Listesi (Düzenlenebilir) -->
-                    <div v-if="adminTab === 'activities'">
-                        <div v-for="item in sortedActivities" :key="item.id" class="bg-white p-3 rounded border flex justify-between items-center text-sm shadow-sm">
-                            <div class="w-full mr-2">
-                                <div class="font-bold text-gray-700 text-xs mb-1">{{ item.date }} - {{ getActivityLabel(item.type) }}</div>
-                                <div class="flex gap-2 items-center">
-                                    <div class="flex items-center gap-1 bg-gray-100 rounded px-1">
-                                        <span class="text-xs font-bold text-gray-500">Dk:</span>
-                                        <input v-model.number="item.minutes" class="w-10 bg-transparent text-center font-bold text-gray-700 outline-none text-xs">
-                                    </div>
-                                    <div v-if="item.pages > 0" class="flex items-center gap-1 bg-gray-100 rounded px-1">
-                                        <span class="text-xs font-bold text-gray-500">Sf:</span>
-                                        <input v-model.number="item.pages" class="w-10 bg-transparent text-center font-bold text-gray-700 outline-none text-xs">
-                                    </div>
-                                </div>
-                            </div>
-                            <button @click="deleteLog(item.id, 'activities')" class="text-red-500 hover:bg-red-50 p-2 rounded"><i class="fas fa-trash"></i></button>
-                        </div>
-                        <div v-if="activityLog.length === 0" class="text-center text-gray-400 text-xs italic mt-4">Kayıt yok.</div>
-                    </div>
-
-                    <!-- Testler Listesi (Düzenlenebilir) -->
-                    <div v-if="adminTab === 'tests'">
-                        <div v-for="item in sortedTests" :key="item.id" class="bg-white p-3 rounded border flex justify-between items-center text-sm shadow-sm">
-                            <div class="w-full mr-2">
-                                <div class="font-bold text-gray-700 text-xs mb-1">{{ item.date }} - {{ item.subject }}</div>
-                                <div class="flex gap-1 flex-wrap">
-                                    <div class="flex items-center gap-1 bg-green-50 border border-green-200 rounded px-1">
-                                        <span class="text-[10px] font-bold text-green-600">D:</span>
-                                        <input v-model.number="item.correct" class="w-6 bg-transparent text-center font-bold text-green-700 outline-none text-xs" @input="recalcTest(item)">
-                                    </div>
-                                    <div class="flex items-center gap-1 bg-yellow-50 border border-yellow-200 rounded px-1">
-                                        <span class="text-[10px] font-bold text-yellow-600">B:</span>
-                                        <input v-model.number="item.empty" class="w-6 bg-transparent text-center font-bold text-yellow-700 outline-none text-xs" @input="recalcTest(item)">
-                                    </div>
-                                    <div class="flex items-center gap-1 bg-red-50 border border-red-200 rounded px-1">
-                                        <span class="text-[10px] font-bold text-red-600">Y:</span>
-                                        <span class="w-6 text-center font-bold text-red-700 text-xs">{{ item.wrong }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <button @click="deleteLog(item.id, 'tests')" class="text-red-500 hover:bg-red-50 p-2 rounded"><i class="fas fa-trash"></i></button>
-                        </div>
-                         <div v-if="testRecords.length === 0" class="text-center text-gray-400 text-xs italic mt-4">Kayıt yok.</div>
-                    </div>
-
-                </div>
-                <p class="text-[10px] text-gray-400 mt-2 text-center">Değişiklikler otomatik kaydedilir.</p>
+    
+    <!-- YÖNETİCİ GİRİŞ MODALI -->
+    <div v-if="showLoginModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-3xl w-full max-w-sm relative shadow-2xl animate-bounce-slow">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Yönetici Girişi 🔐</h3>
+            <p class="text-sm text-gray-500 mb-4 text-center">Verileri düzenlemek veya silmek için şifre girin.</p>
+            <input type="password" v-model="loginPassword" placeholder="Şifre" class="w-full p-3 border-2 border-gray-200 rounded-xl mb-4 text-center text-lg outline-none focus:border-blue-500">
+            <div class="flex gap-2">
+                <button @click="showLoginModal = false" class="flex-1 py-3 bg-gray-200 rounded-xl font-bold text-gray-600">İptal</button>
+                <button @click="performLogin" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700">Giriş Yap</button>
             </div>
         </div>
     </div>
@@ -330,54 +291,39 @@
 </div>
 
 <script>
+    // ==========================================
+    // URL EKLENDİ! ✅
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLaMto4lO0O_B2FRfMotQclsDXoJmZZLUnGcvh9Qkg8ORwwAlhRLQgKs0hD9_VYQCO/exec"; 
+    // ==========================================
+
     const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
-
-    // --- GÜVENLİ JSON PARSE ---
-    function safeJSONParse(key, fallback) {
-        try {
-            const item = localStorage.getItem(key);
-            return item ? JSON.parse(item) : fallback;
-        } catch (e) {
-            console.error("Veri okuma hatası:", key, e);
-            return fallback;
-        }
-    }
-
     createApp({
         setup() {
-            // Hata Yakalama
-            window.onerror = function(message, source, lineno, colno, error) {
-                console.error("Hata:", message);
-            };
-
-            const appTitle = ref(localStorage.getItem('ikra_app_title') || "Buraya adınızı yazınız");
+            const loading = ref(false);
+            const appTitle = ref(localStorage.getItem('ikra_app_title') || "Buraya adınızı giriniz");
             const showWelcome = ref(true);
             const activeTab = ref('rutin');
             const selectedDate = ref(new Date());
             const profileImage = ref(localStorage.getItem('ikra_profile_pic') || null);
             const editMode = ref(false);
-
-            // Veritabanı
-            const activityLog = ref(safeJSONParse('ikra_activities', []));
-            const testRecords = ref(safeJSONParse('ikra_tests', []));
-            const subjects = ref(safeJSONParse('ikra_subjects', ["Türkçe", "Matematik", "Hayat Bilgisi", "Fen Bilimleri", "İngilizce"]));
+            const editingId = ref(null); 
             
+            // Yönetici Özellikleri
+            const isAdmin = ref(false);
+            const showLoginModal = ref(false);
+            const loginPassword = ref('');
+            
+            const activityLog = ref([]);
+            const testRecords = ref([]);
+            
+            const subjects = ref(JSON.parse(localStorage.getItem('ikra_subjects') || '["Türkçe", "Matematik", "Hayat Bilgisi", "Fen Bilimleri", "İngilizce"]'));
             const defaultActivities = [
                 { id: 'study', label: 'Ders Çalışma', icon: 'fa-clock', color: 'bg-indigo-200' },
                 { id: 'reading', label: 'Kitap Okuma', icon: 'fa-book-open', color: 'bg-orange-200' },
                 { id: 'saz', label: 'Saz Çalış', icon: 'fa-music', color: 'bg-yellow-200' },
                 { id: 'skate', label: 'Paten Sür', icon: 'fa-skating', color: 'bg-blue-200' }
             ];
-            const activities = ref(safeJSONParse('ikra_activity_list', defaultActivities));
-
-            // Admin State
-            const showAdminLogin = ref(false);
-            const isAdmin = ref(false);
-            const adminUser = ref('');
-            const adminPass = ref('');
-            const loginError = ref('');
-            const adminTab = ref('activities');
-
+            const activities = ref(JSON.parse(localStorage.getItem('ikra_activity_list') || JSON.stringify(defaultActivities)));
             const iconOptions = [
                 { val: 'fa-clock', label: 'Saat' }, { val: 'fa-book-open', label: 'Kitap Açık' }, 
                 { val: 'fa-book', label: 'Kitap Kapalı' }, { val: 'fa-music', label: 'Müzik' },
@@ -388,7 +334,6 @@
                 { val: 'fa-gamepad', label: 'Oyun' }, { val: 'fa-bed', label: 'Uyku' },
                 { val: 'fa-heart', label: 'Kalp' }, { val: 'fa-star', label: 'Yıldız' }
             ];
-
             const showModal = ref(false);
             const currentActivity = ref(null);
             const modalMinutes = ref('');
@@ -400,12 +345,11 @@
             const formatDateKey = (d) => d.toLocaleDateString('tr-TR');
             const selectedDateKey = computed(() => formatDateKey(selectedDate.value));
             
-            const dailyActivities = computed(() => activityLog.value.filter(l => l.date === selectedDateKey.value));
-            const dailyTests = computed(() => testRecords.value.filter(t => t.date === selectedDateKey.value));
+            // 0 OLANLARI GİZLE (SİLİNMİŞ GİBİ GÖSTER)
+            // Hem listelerden hem grafiklerden anında silinir.
+            const dailyActivities = computed(() => activityLog.value.filter(l => l.date === selectedDateKey.value && l.minutes > 0));
+            const dailyTests = computed(() => testRecords.value.filter(t => t.date === selectedDateKey.value && t.total > 0));
             
-            const sortedActivities = computed(() => [...activityLog.value].sort((a,b) => new Date(b.id) - new Date(a.id)));
-            const sortedTests = computed(() => [...testRecords.value].sort((a,b) => new Date(b.id) - new Date(a.id)));
-
             const calculateWrong = computed(() => {
                 const total = Number(newTest.value.total) || 0;
                 const correct = Number(newTest.value.correct) || 0;
@@ -413,10 +357,15 @@
                 const wrong = total - correct - empty;
                 return wrong > 0 ? wrong : 0;
             });
-            const isValidTest = computed(() => newTest.value.total && newTest.value.correct !== '' && calculateWrong.value >= 0);
+            
+            // 0 Girişine izin veriyoruz (Silme için)
+            const isValidTest = computed(() => newTest.value.total !== '' && newTest.value.correct !== '' && calculateWrong.value >= 0);
+            
             const filteredRecords = computed(() => {
-                if (chartSubject.value === 'all') return testRecords.value;
-                return testRecords.value.filter(r => r.subject === chartSubject.value);
+                // Grafikte de 0 olanları gösterme
+                let recs = testRecords.value.filter(t => Number(t.total) > 0);
+                if (chartSubject.value === 'all') return recs;
+                return recs.filter(r => r.subject === chartSubject.value);
             });
             const weekDays = computed(() => {
                 const curr = new Date(selectedDate.value);
@@ -431,16 +380,13 @@
                 return days;
             });
 
-            // --- WATCHERS ---
+            // Watchers - Deep Watch ekledik ki her değişikliği yakalasın
             watch(appTitle, (val) => localStorage.setItem('ikra_app_title', val));
-            watch(activityLog, (val) => localStorage.setItem('ikra_activities', JSON.stringify(val)), { deep: true });
-            watch(testRecords, (val) => localStorage.setItem('ikra_tests', JSON.stringify(val)), { deep: true });
             watch(activities, (val) => localStorage.setItem('ikra_activity_list', JSON.stringify(val)), { deep: true });
             watch(subjects, (val) => localStorage.setItem('ikra_subjects', JSON.stringify(val)), { deep: true });
-            watch([dailyActivities, activeTab], () => { if(activeTab.value === 'rutin') nextTick(renderPieChart); });
-            watch([filteredRecords, activeTab, chartSubject], () => { if(activeTab.value === 'ders') nextTick(renderLineChart); });
+            watch([dailyActivities, activeTab], () => { if(activeTab.value === 'rutin') nextTick(renderPieChart); }, { deep: true });
+            watch([filteredRecords, activeTab, chartSubject], () => { if(activeTab.value === 'ders') nextTick(renderLineChart); }, { deep: true });
 
-            // --- METHODS ---
             const toggleEditMode = () => editMode.value = !editMode.value;
             const selectDate = (date) => selectedDate.value = date;
             const changeWeek = (dir) => { const d = new Date(selectedDate.value); d.setDate(d.getDate() + (dir * 7)); selectedDate.value = d; };
@@ -457,91 +403,201 @@
                 }
             };
             const addNewActivity = () => { activities.value.push({ id: 'act_' + Date.now(), label: 'Yeni', icon: 'fa-star', color: 'bg-gray-200' }); };
-            const removeActivity = (index) => { if(confirm('Bu aktivite butonunu silmek istiyor musunuz?')) activities.value.splice(index, 1); };
+            const removeActivity = (index) => { if(confirm('Silmek istiyor musunuz?')) activities.value.splice(index, 1); };
             const addSubject = () => subjects.value.push('Yeni Ders');
-            const removeSubject = (index) => { if(confirm('Dersi silmek istiyor musunuz?')) subjects.value.splice(index, 1); };
-            const openActivityModal = (act) => { if(editMode.value) return; currentActivity.value = act; modalMinutes.value = ''; modalPages.value = ''; showModal.value = true; };
-            const confirmActivity = () => {
-                if(!modalMinutes.value) return;
-                activityLog.value.push({ id: Date.now(), type: currentActivity.value.id, minutes: Number(modalMinutes.value), pages: Number(modalPages.value) || 0, date: selectedDateKey.value });
-                showModal.value = false;
-            };
+            const removeSubject = (index) => { if(confirm('Silmek istiyor musunuz?')) subjects.value.splice(index, 1); };
             
-            // SİLME İŞLEMİ (Kesin Çözüm)
-            const deleteLog = (id, type) => {
-                if(confirm('Kaydı silmek istediğinize emin misiniz?')) {
-                    if(type === 'activities') activityLog.value = activityLog.value.filter(x => String(x.id) !== String(id));
-                    else testRecords.value = testRecords.value.filter(x => String(x.id) !== String(id));
+            // YÖNETİCİ GİRİŞİ
+            const toggleAdminLogin = () => {
+                if(isAdmin.value) { isAdmin.value = false; alert("Yönetici çıkışı yapıldı."); } 
+                else { showLoginModal.value = true; }
+            };
+            const performLogin = () => {
+                if(loginPassword.value === '1234') { 
+                    isAdmin.value = true; showLoginModal.value = false; loginPassword.value = ''; alert("Yönetici girişi başarılı!"); 
+                } else { alert("Hatalı şifre!"); }
+            };
+
+            // GOOGLE API
+            const fetchDataFromGoogle = async () => {
+                if(!GOOGLE_SCRIPT_URL) return;
+                loading.value = true;
+                try {
+                    const res = await fetch(GOOGLE_SCRIPT_URL);
+                    const data = await res.json();
+                    
+                    // BURADA TEMİZLİK YAPIYORUZ: 0 veya geçersiz olanları listeye hiç alma
+                    activityLog.value = data.filter(item => item.dataType === 'activity' && Number(item.minutes) > 0);
+                    testRecords.value = data.filter(item => item.dataType === 'test' && Number(item.total) > 0);
+                    
+                } catch(err) { console.error(err); } 
+                finally { loading.value = false; nextTick(() => { if(activeTab.value === 'rutin') renderPieChart(); if(activeTab.value === 'ders') renderLineChart(); }); }
+            };
+
+            const sendDataToGoogle = async (payload) => {
+                if(!GOOGLE_SCRIPT_URL) { alert("Google Script URL'si eksik!"); return; }
+                loading.value = true;
+                try {
+                    await fetch(GOOGLE_SCRIPT_URL, {
+                        method: "POST", mode: "no-cors",
+                        headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify(payload)
+                    });
+                } catch(err) { alert("Sunucu hatası!"); } 
+                finally { loading.value = false; }
+            };
+
+            // DÜZENLEME VE SİLME FONKSİYONLARI
+            const deleteLog = async (id, type) => {
+                // Bu fonksiyon artık kullanılmıyor olabilir ama eski uyumluluk için bırakıyoruz
+                // Artık silme işini "Edit -> 0 Yap -> Kaydet" yöntemiyle yapıyoruz
+                if(!confirm('Kalıcı olarak silmek istiyor musunuz?')) return;
+                
+                // Ekrandan sil (Hızlı geri bildirim)
+                if(type === 'activity') activityLog.value = activityLog.value.filter(x => x.id !== id);
+                else testRecords.value = testRecords.value.filter(x => x.id !== id);
+                
+                // Sunucuya gönder
+                await sendDataToGoogle({ dataType: 'delete', deleteId: id });
+                
+                nextTick(() => { if(activeTab.value === 'rutin') renderPieChart(); if(activeTab.value === 'ders') renderLineChart(); });
+            };
+
+            const editLog = (item, type) => {
+                editingId.value = item.id;
+                
+                if (type.includes('delete')) {
+                    // Silme (Sıfırlama) Modu
+                    if(!confirm("Bu kaydı silmek için değerlerini 0 yaparak güncellemek ister misiniz?")) {
+                        editingId.value = null; return;
+                    }
+                }
+                
+                if(type.startsWith('activity')) {
+                    const actDef = activities.value.find(a => a.id === item.type);
+                    currentActivity.value = actDef || { icon: 'fa-star', label: 'Bilinmeyen' };
+                    modalMinutes.value = type.includes('delete') ? 0 : item.minutes;
+                    modalPages.value = type.includes('delete') ? 0 : item.pages;
+                    showModal.value = true;
+                    if(type.includes('delete')) confirmActivity(); // Otomatik onayla
+                } else {
+                    newTest.value = {
+                        subject: item.subject,
+                        total: type.includes('delete') ? 0 : item.total,
+                        correct: type.includes('delete') ? 0 : item.correct,
+                        empty: type.includes('delete') ? 0 : item.empty
+                    };
+                    if(type.includes('delete')) {
+                        saveTest(); // Otomatik onayla
+                    } else {
+                        document.querySelector('header').scrollIntoView({ behavior: 'smooth' });
+                    }
                 }
             };
+
+            const cancelEdit = () => {
+                editingId.value = null;
+                newTest.value = { subject: 'Türkçe', total: '', correct: '', empty: '' };
+            };
+
+            const openActivityModal = (act) => { 
+                if(editMode.value) return; 
+                editingId.value = null; // Yeni kayıt
+                currentActivity.value = act; modalMinutes.value = ''; modalPages.value = ''; showModal.value = true; 
+            };
             
+            const confirmActivity = () => {
+                if(modalMinutes.value === '') return; // Boş olamaz ama 0 olabilir
+                const payload = { 
+                    id: editingId.value || Date.now(), 
+                    type: currentActivity.value.id, 
+                    minutes: Number(modalMinutes.value), 
+                    pages: Number(modalPages.value) || 0, 
+                    date: selectedDateKey.value,
+                    dataType: 'activity' // Güncelleme olsa da veri tipi activity
+                };
+                
+                if(editingId.value) {
+                     // Güncelleme: Listeden eskisini bul değiştir
+                     const idx = activityLog.value.findIndex(x => x.id === editingId.value);
+                     if(idx !== -1) activityLog.value[idx] = payload;
+                     payload.dataType = 'update'; // Script'e update emri
+                } else {
+                     // Yeni kayıt
+                     activityLog.value.push(payload);
+                }
+                
+                sendDataToGoogle(payload);
+                showModal.value = false;
+                editingId.value = null;
+            };
+
+            const saveTest = () => {
+                if(!isValidTest.value) return;
+                const payload = { 
+                    id: editingId.value || Date.now(), 
+                    subject: newTest.value.subject, 
+                    total: Number(newTest.value.total), 
+                    correct: Number(newTest.value.correct), 
+                    empty: Number(newTest.value.empty) || 0, 
+                    wrong: calculateWrong.value, 
+                    date: selectedDateKey.value, 
+                    isoDate: selectedDate.value.toISOString(),
+                    dataType: 'test'
+                };
+                
+                if(editingId.value) {
+                    const idx = testRecords.value.findIndex(x => x.id === editingId.value);
+                    if(idx !== -1) testRecords.value[idx] = payload;
+                    payload.dataType = 'update';
+                } else {
+                    testRecords.value.push(payload);
+                }
+                
+                sendDataToGoogle(payload);
+                newTest.value.correct = ''; newTest.value.empty = '';
+                editingId.value = null;
+            };
+            
+            // Grafik ve Yardımcılar
             const getDayActivityTotal = (actId) => dailyActivities.value.filter(x => x.type === actId).reduce((sum, x) => sum + x.minutes, 0);
             const getActivityLabel = (id) => activities.value.find(a => a.id === id)?.label || 'Bilinmeyen';
             const getActivityIcon = (id) => activities.value.find(a => a.id === id)?.icon || 'fa-star';
-            
-            const saveTest = () => {
-                if(!isValidTest.value) return;
-                testRecords.value.push({ id: Date.now(), subject: newTest.value.subject, total: Number(newTest.value.total), correct: Number(newTest.value.correct), empty: Number(newTest.value.empty) || 0, wrong: calculateWrong.value, date: selectedDateKey.value, isoDate: selectedDate.value.toISOString() });
-                newTest.value.correct = ''; newTest.value.empty = '';
-            };
-
-            // ADMIN
-            const checkLogin = () => {
-                if(adminUser.value === 'admin' && adminPass.value === '1234') {
-                    isAdmin.value = true; loginError.value = '';
-                } else {
-                    loginError.value = 'Hatalı Kullanıcı Adı veya Şifre!';
-                }
-            };
-            const closeAdmin = () => { showAdminLogin.value = false; isAdmin.value = false; adminUser.value = ''; adminPass.value = ''; loginError.value = ''; };
-            const openAdminLogin = () => { showAdminLogin.value = true; };
-            
-            // Admin Panelinde Düzenleme Yapıldığında Yanlış Sayısını Yeniden Hesapla
-            const recalcTest = (item) => {
-                const total = Number(item.total) || 0;
-                const correct = Number(item.correct) || 0;
-                const empty = Number(item.empty) || 0;
-                item.wrong = total - correct - empty;
-                if(item.wrong < 0) item.wrong = 0;
-            };
-            const saveDataAdmin = () => { /* Watcher otomatik kaydeder */ };
 
             const renderPieChart = () => {
                 const ctx = document.getElementById('rutinChart');
-                if(!ctx) return;
-                if(pieChart) pieChart.destroy();
-                const summary = {};
-                dailyActivities.value.forEach(x => { summary[x.type] = (summary[x.type] || 0) + x.minutes; });
-                const labels = Object.keys(summary).map(k => getActivityLabel(k));
-                const data = Object.values(summary);
+                if(!ctx) return; if(pieChart) pieChart.destroy();
+                const summary = {}; dailyActivities.value.forEach(x => { summary[x.type] = (summary[x.type] || 0) + x.minutes; });
+                const labels = Object.keys(summary).map(k => getActivityLabel(k)); const data = Object.values(summary);
                 const colors = ['#FFCDD2', '#F8BBD0', '#E1BEE7', '#D1C4E9', '#C5CAE9', '#BBDEFB', '#B3E5FC', '#B2EBF2', '#B2DFDB', '#C8E6C9'];
                 pieChart = new Chart(ctx, { type: 'doughnut', data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } } });
             };
             const renderLineChart = () => {
                 const ctx = document.getElementById('dersChart');
-                if(!ctx) return;
+                if(!ctx) return; 
                 if(lineChart) lineChart.destroy();
-                const sorted = [...filteredRecords.value].sort((a,b) => new Date(a.isoDate) - new Date(b.isoDate));
-                const last10 = sorted.slice(-10);
-                const labels = last10.map(x => x.date.substring(0, 5));
-                const data = last10.map(x => (x.correct / x.total) * 100);
+                
+                // Filtrelenmiş veri yoksa (veya hepsi 0 ise) boş bırak
+                if (filteredRecords.value.length === 0) return;
+
+                const sorted = [...filteredRecords.value].sort((a,b) => new Date(a.isoDate) - new Date(b.isoDate)); const last10 = sorted.slice(-10);
+                const labels = last10.map(x => x.date.substring(0, 5)); const data = last10.map(x => (x.correct / x.total) * 100);
                 lineChart = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: 'Başarı Yüzdesi (%)', data: data, borderColor: '#4CAF50', backgroundColor: 'rgba(76, 175, 80, 0.1)', fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } } });
             };
 
-            onMounted(() => { setTimeout(() => { if(activeTab.value==='rutin') renderPieChart(); }, 100); });
+            onMounted(() => { fetchDataFromGoogle(); });
 
             return {
-                appTitle, showWelcome, activeTab, selectedDate, profileImage, defaultAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ikra&hair=long&clothing=overall&clothingColor=pink", editMode,
+                loading, appTitle, showWelcome, activeTab, selectedDate, profileImage, editMode,
+                isAdmin, showLoginModal, loginPassword, toggleAdminLogin, performLogin, deleteLog, editLog,
+                editingId, cancelEdit,
                 weekDays, changeWeek, selectDate, isSelected, formatDateDisplay,
-                activities, subjects, iconOptions,
-                activityLog, testRecords, dailyActivities, dailyTests,
+                activities, subjects, iconOptions, activityLog, testRecords, dailyActivities, dailyTests,
                 triggerFileUpload, onFileSelected, addNewActivity, removeActivity, addSubject, removeSubject,
                 showModal, openActivityModal, currentActivity, modalMinutes, modalPages, confirmActivity,
-                deleteLog, getDayActivityTotal, getActivityLabel, getActivityIcon,
+                getDayActivityTotal, getActivityLabel, getActivityIcon,
                 newTest, calculateWrong, isValidTest, saveTest, toggleEditMode,
-                chartSubject, filteredRecords, onManualDateChange,
-                // Admin
-                showAdminLogin, isAdmin, adminUser, adminPass, loginError, adminTab, checkLogin, closeAdmin, sortedActivities, sortedTests, openAdminLogin, recalcTest, saveDataAdmin
+                chartSubject, filteredRecords, onManualDateChange
             };
         }
     }).mount('#app');
