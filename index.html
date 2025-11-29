@@ -292,8 +292,8 @@
 
 <script>
     // ==========================================
-    // URL EKLENDİ! ✅
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLaMto4lO0O_B2FRfMotQclsDXoJmZZLUnGcvh9Qkg8ORwwAlhRLQgKs0hD9_VYQCO/exec"; 
+    // YENİ URL EKLENDİ! ✅
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpKpdCf40b2ktiUOWZh-JNVJ_Y1bq5MUMF_izdTMdHk6B4dU1cdhcF1P1KUPp6EeFWRg/exec"; 
     // ==========================================
 
     const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
@@ -347,8 +347,8 @@
             
             // 0 OLANLARI GİZLE (SİLİNMİŞ GİBİ GÖSTER)
             // Hem listelerden hem grafiklerden anında silinir.
-            const dailyActivities = computed(() => activityLog.value.filter(l => l.date === selectedDateKey.value && l.minutes > 0));
-            const dailyTests = computed(() => testRecords.value.filter(t => t.date === selectedDateKey.value && t.total > 0));
+            const dailyActivities = computed(() => activityLog.value.filter(l => l.date === selectedDateKey.value && Number(l.minutes) > 0));
+            const dailyTests = computed(() => testRecords.value.filter(t => t.date === selectedDateKey.value && Number(t.total) > 0));
             
             const calculateWrong = computed(() => {
                 const total = Number(newTest.value.total) || 0;
@@ -435,7 +435,10 @@
             };
 
             const sendDataToGoogle = async (payload) => {
-                if(!GOOGLE_SCRIPT_URL) { alert("Google Script URL'si eksik!"); return; }
+                if(!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "BURAYA_YAPISTIR") { 
+                    alert("Lütfen Google Script URL'nizi index.html dosyasının içine yapıştırın!"); 
+                    return; 
+                }
                 loading.value = true;
                 try {
                     await fetch(GOOGLE_SCRIPT_URL, {
