@@ -25,7 +25,6 @@
         .icon-select { 
             -webkit-appearance: none; appearance: none; text-align: center; text-align-last: center;
         }
-        /* Gizli dosya inputu için */
         .hidden { display: none; }
     </style>
 </head>
@@ -34,8 +33,9 @@
 <div id="app" class="flex flex-col min-h-screen max-w-md mx-auto bg-white shadow-2xl relative overflow-hidden">
 
     <!-- YÜKLENİYOR UYARISI -->
-    <div v-if="loading" class="absolute inset-0 z-[60] flex items-center justify-center bg-white/90">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+    <div v-if="loading" class="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-pink-500 mb-3"></div>
+        <p class="text-pink-600 font-bold animate-pulse">Veriler Eşitleniyor...</p>
     </div>
 
     <!-- KARŞILAMA EKRANI -->
@@ -169,7 +169,7 @@
                             <div class="text-xs text-gray-400">{{ log.minutes }} dk <span v-if="log.pages">• {{ log.pages }} Syf</span></div>
                         </div>
                     </div>
-                    <button @click="deleteLog(log.id, 'activities')" class="text-red-300 hover:text-red-500 p-2"><i class="fas fa-trash"></i></button>
+                    <!-- Silme butonu veri tutarlılığı için gizlendi -->
                 </div>
             </div>
         </div>
@@ -209,7 +209,7 @@
             <div class="space-y-2">
                 <div v-for="record in dailyTests" :key="record.id" class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm">
                     <div><div class="font-bold text-gray-700 text-sm">{{ record.subject }}</div><div class="text-xs text-gray-400">{{ record.total }} Soru</div></div>
-                    <div class="flex gap-2"><span class="px-2 py-1 bg-green-100 text-green-600 rounded text-xs font-bold">D:{{record.correct}}</span><span class="px-2 py-1 bg-yellow-100 text-yellow-600 rounded text-xs font-bold">B:{{record.empty}}</span><span class="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">Y:{{record.wrong}}</span><button @click="deleteTest(record.id)" class="text-red-300 hover:text-red-500 ml-1"><i class="fas fa-trash"></i></button></div>
+                    <div class="flex gap-2"><span class="px-2 py-1 bg-green-100 text-green-600 rounded text-xs font-bold">D:{{record.correct}}</span><span class="px-2 py-1 bg-yellow-100 text-yellow-600 rounded text-xs font-bold">B:{{record.empty}}</span><span class="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-bold">Y:{{record.wrong}}</span></div>
                 </div>
             </div>
         </div>
@@ -229,6 +229,11 @@
 </div>
 
 <script>
+    // ==========================================
+    // GOOGLE SCRIPT URL'SI EKLENDİ! ✅
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLaMto4lO0O_B2FRfMotQclsDXoJmZZLUnGcvh9Qkg8ORwwAlhRLQgKs0hD9_VYQCO/exec"; 
+    // ==========================================
+
     const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
     createApp({
         setup() {
@@ -238,10 +243,12 @@
             const activeTab = ref('rutin');
             const selectedDate = ref(new Date());
             const profileImage = ref(localStorage.getItem('ikra_profile_pic') || null);
-            const defaultAvatar = "https://api.dicebear.com/7.x/avataaars/svg?seed=Ikra&hair=long&clothing=overall&clothingColor=pink";
             const editMode = ref(false);
-            const activityLog = ref(JSON.parse(localStorage.getItem('ikra_activities') || '[]'));
-            const testRecords = ref(JSON.parse(localStorage.getItem('ikra_tests') || '[]'));
+            
+            // Veriler artık boş başlıyor, Google'dan dolacak
+            const activityLog = ref([]);
+            const testRecords = ref([]);
+            
             const subjects = ref(JSON.parse(localStorage.getItem('ikra_subjects') || '["Türkçe", "Matematik", "Hayat Bilgisi", "Fen Bilimleri", "İngilizce"]'));
             const defaultActivities = [
                 { id: 'study', label: 'Ders Çalışma', icon: 'fa-clock', color: 'bg-indigo-200' },
@@ -297,11 +304,12 @@
                 return days;
             });
 
+            // Yerel ayarları sakla ama veri güncellemelerini Google'a sor
             watch(appTitle, (val) => localStorage.setItem('ikra_app_title', val));
-            watch(activityLog, (val) => localStorage.setItem('ikra_activities', JSON.stringify(val)), { deep: true });
-            watch(testRecords, (val) => localStorage.setItem('ikra_tests', JSON.stringify(val)), { deep: true });
             watch(activities, (val) => localStorage.setItem('ikra_activity_list', JSON.stringify(val)), { deep: true });
             watch(subjects, (val) => localStorage.setItem('ikra_subjects', JSON.stringify(val)), { deep: true });
+            
+            // Grafik güncellemeleri
             watch([dailyActivities, activeTab], () => { if(activeTab.value === 'rutin') nextTick(renderPieChart); });
             watch([filteredRecords, activeTab, chartSubject], () => { if(activeTab.value === 'ders') nextTick(renderLineChart); });
 
@@ -324,28 +332,107 @@
             const removeActivity = (index) => { if(confirm('Silmek istiyor musunuz?')) activities.value.splice(index, 1); };
             const addSubject = () => subjects.value.push('Yeni Ders');
             const removeSubject = (index) => { if(confirm('Silmek istiyor musunuz?')) subjects.value.splice(index, 1); };
-            const openActivityModal = (act) => { if(editMode.value) return; currentActivity.value = act; modalMinutes.value = ''; modalPages.value = ''; showModal.value = true; };
-            const confirmActivity = () => {
-                if(!modalMinutes.value) return;
-                activityLog.value.push({ id: Date.now(), type: currentActivity.value.id, minutes: Number(modalMinutes.value), pages: Number(modalPages.value) || 0, date: selectedDateKey.value });
-                showModal.value = false;
-            };
-            const deleteLog = (id, type) => {
-                if(confirm('Kaydı silmek istiyor musunuz?')) {
-                    if(type === 'activities') activityLog.value = activityLog.value.filter(x => x.id !== id);
-                    else testRecords.value = testRecords.value.filter(x => x.id !== id);
+            
+            // API FONKSİYONLARI
+            const fetchDataFromGoogle = async () => {
+                if(!GOOGLE_SCRIPT_URL) return;
+                loading.value = true;
+                try {
+                    const res = await fetch(GOOGLE_SCRIPT_URL);
+                    const data = await res.json();
+                    
+                    // Gelen veriyi ayıkla
+                    activityLog.value = data.filter(item => item.dataType === 'activity');
+                    testRecords.value = data.filter(item => item.dataType === 'test');
+                    
+                } catch(err) {
+                    console.error("Veri çekme hatası", err);
+                    alert("Veriler güncellenemedi, internet bağlantınızı kontrol edin.");
+                } finally {
+                    loading.value = false;
+                    nextTick(() => {
+                        if(activeTab.value === 'rutin') renderPieChart();
+                        if(activeTab.value === 'ders') renderLineChart();
+                    });
                 }
             };
-            const getDayActivityTotal = (actId) => dailyActivities.value.filter(x => x.type === actId).reduce((sum, x) => sum + x.minutes, 0);
-            const getActivityLabel = (id) => activities.value.find(a => a.id === id)?.label || 'Bilinmeyen';
-            const getActivityIcon = (id) => activities.value.find(a => a.id === id)?.icon || 'fa-star';
+
+            const sendDataToGoogle = async (dataType, dataObject) => {
+                if(!GOOGLE_SCRIPT_URL) {
+                    alert("Google Script URL'si eksik!");
+                    return;
+                }
+                loading.value = true;
+                
+                // Gönderilecek paket
+                const payload = {
+                    dataType: dataType,
+                    ...dataObject
+                };
+
+                try {
+                    await fetch(GOOGLE_SCRIPT_URL, {
+                        method: "POST",
+                        mode: "no-cors",
+                        headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    // Kayıt başarılı varsayıyoruz (no-cors yüzünden)
+                    // Listelere ekle
+                    if(dataType === 'activity') activityLog.value.push(dataObject);
+                    if(dataType === 'test') testRecords.value.push(dataObject);
+                    
+                } catch(err) {
+                    console.error("Kayıt hatası", err);
+                    alert("Kayıt yapılamadı!");
+                } finally {
+                    loading.value = false;
+                    // Sayfayı yenileyerek verilerin güncel halini gösterelim
+                    // setTimeout(() => location.reload(), 1500); 
+                }
+            };
+
+            const openActivityModal = (act) => { if(editMode.value) return; currentActivity.value = act; modalMinutes.value = ''; modalPages.value = ''; showModal.value = true; };
+            
+            const confirmActivity = () => {
+                if(!modalMinutes.value) return;
+                const newActivity = { 
+                    id: Date.now(), 
+                    type: currentActivity.value.id, 
+                    minutes: Number(modalMinutes.value), 
+                    pages: Number(modalPages.value) || 0, 
+                    date: selectedDateKey.value,
+                    dataType: 'activity' // Script için tip
+                };
+                
+                sendDataToGoogle('activity', newActivity);
+                showModal.value = false;
+            };
+
             const saveTest = () => {
                 if(!isValidTest.value) return;
-                testRecords.value.push({ id: Date.now(), subject: newTest.value.subject, total: Number(newTest.value.total), correct: Number(newTest.value.correct), empty: Number(newTest.value.empty) || 0, wrong: calculateWrong.value, date: selectedDateKey.value, isoDate: selectedDate.value.toISOString() });
+                const newRecord = { 
+                    id: Date.now(), 
+                    subject: newTest.value.subject, 
+                    total: Number(newTest.value.total), 
+                    correct: Number(newTest.value.correct), 
+                    empty: Number(newTest.value.empty) || 0, 
+                    wrong: calculateWrong.value, 
+                    date: selectedDateKey.value, 
+                    isoDate: selectedDate.value.toISOString(),
+                    dataType: 'test' // Script için tip
+                };
+                
+                sendDataToGoogle('test', newRecord);
+                
                 newTest.value.correct = ''; newTest.value.empty = '';
             };
             
-            const deleteTest = (id) => deleteLog(id, 'tests');
+            // Grafik Fonksiyonları
+            const getDayActivityTotal = (actId) => dailyActivities.value.filter(x => x.type === actId).reduce((sum, x) => sum + x.minutes, 0);
+            const getActivityLabel = (id) => activities.value.find(a => a.id === id)?.label || 'Bilinmeyen';
+            const getActivityIcon = (id) => activities.value.find(a => a.id === id)?.icon || 'fa-star';
 
             const renderPieChart = () => {
                 const ctx = document.getElementById('rutinChart');
@@ -369,17 +456,19 @@
                 lineChart = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label: 'Başarı Yüzdesi (%)', data: data, borderColor: '#4CAF50', backgroundColor: 'rgba(76, 175, 80, 0.1)', fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } } });
             };
 
-            onMounted(() => { setTimeout(() => { if(activeTab.value==='rutin') renderPieChart(); }, 100); });
+            onMounted(() => { 
+                fetchDataFromGoogle(); // Verileri Google'dan çek
+            });
 
             return {
-                loading, appTitle, showWelcome, activeTab, selectedDate, profileImage, defaultAvatar, editMode,
+                loading, appTitle, showWelcome, activeTab, selectedDate, profileImage, editMode,
                 weekDays, changeWeek, selectDate, isSelected, formatDateDisplay,
                 activities, subjects, iconOptions,
                 activityLog, testRecords, dailyActivities, dailyTests,
                 triggerFileUpload, onFileSelected, addNewActivity, removeActivity, addSubject, removeSubject,
                 showModal, openActivityModal, currentActivity, modalMinutes, modalPages, confirmActivity,
-                deleteLog, getDayActivityTotal, getActivityLabel, getActivityIcon,
-                newTest, calculateWrong, isValidTest, saveTest, deleteTest, toggleEditMode,
+                getDayActivityTotal, getActivityLabel, getActivityIcon,
+                newTest, calculateWrong, isValidTest, saveTest, toggleEditMode,
                 chartSubject, filteredRecords, onManualDateChange
             };
         }
